@@ -1,12 +1,14 @@
 ---
 title: Entity
+section_title: Core API
 type: core
 layout: docs
-parent_section: core
-order: 2
+parent_section: docs
+order: 1
+section_order: 3
 ---
 
-[ecs]: ./index.md
+[ecs]: ../introduction/entity-component-system.md
 
 A-Frame represents an entity via the `<a-entity>` element. As defined in the
 [entity-component-system pattern][ecs], entities are placeholder objects to
@@ -201,7 +203,7 @@ Read more about [component-to-DOM serialization][component-to-dom-serialization]
 // <a-entity geometry="primitive: box; width: 3">
 
 entity.getAttribute('geometry');
-// >> {primitive: "box", depth: 2, height: 2, translate: "0 0 0", width: 3, ...}
+// >> {primitive: "box", depth: 2, height: 2, width: 3, ...}
 
 entity.getAttribute('geometry').primitive;
 // >> "box"

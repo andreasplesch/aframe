@@ -1,4 +1,3 @@
-/* global HTMLElement */
 var components = require('./component');
 var schema = require('./schema');
 var utils = require('../utils/');
@@ -80,7 +79,7 @@ System.prototype = {
   buildData: function (rawData) {
     var schema = this.schema;
     if (!Object.keys(schema).length) { return; }
-    rawData = rawData || HTMLElement.prototype.getAttribute.call(this.sceneEl, this.name);
+    rawData = rawData || window.HTMLElement.prototype.getAttribute.call(this.sceneEl, this.name);
     if (isSingleProp(schema)) {
       this.data = parseProperty(rawData, schema);
     } else {
@@ -97,6 +96,16 @@ System.prototype = {
    * @param {number} timeDelta - Difference in current render time and previous render time.
    */
   tick: undefined,
+
+  /**
+   * Tock handler.
+   * Called on each tock of the scene render loop.
+   * Affected by play and pause.
+   *
+   * @param {number} time - Scene tick time.
+   * @param {number} timeDelta - Difference in current render time and previous render time.
+   */
+  tock: undefined,
 
   /**
    * Called to start any dynamic behavior (e.g., animation, AI, events, physics).

@@ -73,7 +73,7 @@ A-Frame ships with a couple of built-in materials.
 
 ### `standard`
 
-[threestandardmaterial]: http://threejs.org/docs/#Reference/Materials/MeshStandardMaterial
+[threestandardmaterial]: https://threejs.org/docs/#api/materials/MeshStandardMaterial
 
 The `standard` material is the default material. It uses the physically-based
 [THREE.MeshStandardMaterial][threestandardmaterial].
@@ -174,7 +174,7 @@ For example:
 
 ### `flat`
 
-[basic]: http://threejs.org/docs/#Reference/Materials/MeshBasicMaterial
+[basic]: https://threejs.org/docs/#api/materials/MeshBasicMaterial
 
 The `flat` material uses the [THREE.MeshBasicMaterial][basic]. Flat materials
 are not affected by the scene's lighting conditions. This is useful for things
@@ -371,7 +371,7 @@ AFRAME.registerShader('custom', {
 
 ### Example — Basic Materials
 
-[line-dashed]: http://threejs.org/docs/index.html#Reference/Materials/LineDashedMaterial
+[line-dashed]: https://threejs.org/docs/#api/materials/LineDashedMaterial
 
 To create a custom material, we have the `init` and `update` handlers set and
 update `this.material` to the desired material. Here is an example of
@@ -404,7 +404,7 @@ AFRAME.registerShader('line-dashed', {
 
 ### Example — GLSL and Shaders
 
-For more customized visual effects, we can write GLSL shaders and apply them to A-Frame entities. We'll do this using [THREE.ShaderMaterial](https://threejs.org/docs/#Reference/Materials/ShaderMaterial) and a custom component. GLSL shaders can also be used with the `registerShader` API, but for many cases — here, we need a `tick()` handler to update the shader's clock — using a component can be easier.
+For more customized visual effects, we can write GLSL shaders and apply them to A-Frame entities. We'll do this using [THREE.ShaderMaterial](https://threejs.org/docs/#api/materials/ShaderMaterial) and a custom component. GLSL shaders can also be used with the `registerShader` API, but for many cases — here, we need a `tick()` handler to update the shader's clock — using a component can be easier.
 
 > NOTE: GLSL, the syntax used to write shaders, may seem a bit scary at first. For a gentle (and free!) introduction, we recommend [The Book of Shaders](http://thebookofshaders.com/).
 

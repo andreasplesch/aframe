@@ -1,4 +1,3 @@
-/* global HTMLElement */
 var ANode = require('./a-node');
 var COMPONENTS = require('./component').components;
 var registerElement = require('./a-register-element').registerElement;
@@ -36,7 +35,7 @@ var proto = Object.create(ANode.prototype, {
   createdCallback: {
     value: function () {
       this.components = {};
-      // to avoid double initializations and infinite loops
+      // To avoid double initializations and infinite loops.
       this.initializingComponents = {};
       this.isEntity = true;
       this.isPlaying = false;
@@ -384,7 +383,7 @@ var proto = Object.create(ANode.prototype, {
       // the component with the empty string.
       if (!this.hasAttribute(attrName)) {
         component.justInitialized = true;
-        HTMLElement.prototype.setAttribute.call(this, attrName, '');
+        window.HTMLElement.prototype.setAttribute.call(this, attrName, '');
       }
 
       debug('Component initialized: %s', attrName);
@@ -416,7 +415,7 @@ var proto = Object.create(ANode.prototype, {
         // Call getAttribute to initialize the data from the DOM.
         self.initComponent(
           componentName,
-          HTMLElement.prototype.getAttribute.call(self, componentName) || undefined,
+          window.HTMLElement.prototype.getAttribute.call(self, componentName) || undefined,
           true
         );
       });
@@ -435,6 +434,18 @@ var proto = Object.create(ANode.prototype, {
       if (isDefault || isMixedIn) { return; }
 
       component = this.components[name];
+      if (!component) { return; }
+
+      // Wait for component to initialize.
+      if (!component.initialized) {
+        this.addEventListener('componentinitialized', function tryRemoveLater (evt) {
+          if (evt.detail.name !== name) { return; }
+          this.removeComponent(name);
+          this.removeEventListener('componentinitialized', tryRemoveLater);
+        });
+        return;
+      }
+
       component.pause();
       component.remove();
       delete this.components[name];
@@ -442,7 +453,8 @@ var proto = Object.create(ANode.prototype, {
         id: component.id,
         name: name
       });
-    }
+    },
+    writable: window.debug
   },
 
   /**
@@ -510,42 +522,26 @@ var proto = Object.create(ANode.prototype, {
    * When initializing, we set the component on `this.components`.
    *
    * @param {string} attr - Component name.
-   * @param {object} attrValue - The value of the DOM attribute.
+   * @param {object} attrValue - Value of the DOM attribute.
+   * @param {boolean} clobber - If new attrValue completely replaces previous properties.
    */
   updateComponent: {
-    value: function (attr, attrValue) {
+    value: function (attr, attrValue, clobber) {
       var component = this.components[attr];
       var isDefault = attr in this.defaultComponents;
       if (component) {
+        // Remove component.
         if (attrValue === null && !isDefault) {
           this.removeComponent(attr);
           return;
         }
         // Component already initialized. Update component.
-        component.updateProperties(attrValue);
+        component.updateProperties(attrValue, clobber);
         return;
       }
+
       // Component not yet initialized. Initialize component.
       this.initComponent(attr, attrValue, false);
-    }
-  },
-
-  /**
-   * Updates one property of the component
-   *
-   * @param {string} name - Component name
-   * @param {string} property - Component property name
-   * @param {any} propertyValue - New property value
-   */
-  updateComponentProperty: {
-    value: function (name, property, propertyValue) {
-      var component = this.components[name];
-      // Cached attribute value
-      var attrValue = component && component.attrValue;
-      // Copy cached value
-      var componentObj = attrValue ? utils.extend({}, attrValue) : {};
-      componentObj[property] = propertyValue;
-      this.updateComponent(name, componentObj);
     }
   },
 
@@ -579,7 +575,7 @@ var proto = Object.create(ANode.prototype, {
         this.mixinUpdate('');
       }
 
-      HTMLElement.prototype.removeAttribute.call(this, attr);
+      window.HTMLElement.prototype.removeAttribute.call(this, attr);
     }
   },
 
@@ -676,68 +672,59 @@ var proto = Object.create(ANode.prototype, {
    * 4. Set a value for a single-property component, mixin, or normal HTML attribute.
    *
    * @param {string} attrName - Component or attribute name.
-   * @param {string|object} arg1 - Can be a property name or object of properties.
-   * @param {string|bool} arg2 - Can be a value, or boolean indicating whether to update or
-   *   replace.
+   * @param {*} arg1 - Can be a value, property name, CSS-style property string, or
+   *   object of properties.
+   * @param {*|bool} arg2 - If arg1 is a property name, this should be a value. Otherwise,
+   *   it is a boolean indicating whether to clobber previous values (defaults to false).
    */
   setAttribute: {
     value: function (attrName, arg1, arg2) {
+      var newAttrValue;
+      var clobber;
       var componentName;
+      var delimiterIndex;
       var isDebugMode;
 
-      // Determine which type of setAttribute to call based on the types of the arguments.
-      componentName = attrName.split(MULTIPLE_COMPONENT_DELIMITER)[0];
-      if (COMPONENTS[componentName]) {
-        if (typeof arg1 === 'string' && typeof arg2 !== 'undefined') {
-          singlePropertyUpdate(this, attrName, arg1, arg2);
-        } else if (typeof arg1 === 'object' && arg2 === true) {
-          multiPropertyClobber(this, attrName, arg1);
-        } else {
-          componentUpdate(this, attrName, arg1);
-        }
+      delimiterIndex = attrName.indexOf(MULTIPLE_COMPONENT_DELIMITER);
+      componentName = delimiterIndex > 0 ? attrName.substring(0, delimiterIndex) : attrName;
 
-        // In debug mode, write component data up to the DOM.
-        isDebugMode = this.sceneEl && this.sceneEl.getAttribute('debug');
-        if (isDebugMode) { this.components[attrName].flushToDOM(); }
-        return;
-      } else {
+      // Not a component.
+      if (!COMPONENTS[componentName]) {
         normalSetAttribute(this, attrName, arg1);
+        return;
       }
 
-      /**
-       * Just update one of the component properties.
-       * >> setAttribute('foo', 'bar', 'baz')
-       */
-      function singlePropertyUpdate (el, componentName, propName, propertyValue) {
-        el.updateComponentProperty(componentName, propName, propertyValue);
+      // Initialize component first if not yet initialized.
+      if (!this.components[attrName] && this.hasAttribute(attrName)) {
+        this.updateComponent(attrName,
+                             window.HTMLElement.prototype.getAttribute.call(this, attrName));
       }
 
-      /**
-       * Just update multiple component properties at once for a multi-property component.
-       * >> setAttribute('foo', {bar: 'baz'})
-       */
-      function componentUpdate (el, componentName, propValue) {
-        var component = el.components[componentName];
-        if (component && typeof propValue === 'object') {
-          // Extend existing component attribute value.
-          el.updateComponent(
-            componentName,
-            utils.extendDeep(utils.extendDeep({}, component.attrValue), propValue));
-        } else {
-          el.updateComponent(componentName, propValue);
-        }
+      // Determine new attributes from the arguments
+      if (typeof arg2 !== 'undefined' &&
+          typeof arg1 === 'string' &&
+          arg1.length > 0 &&
+          typeof utils.styleParser.parse(arg1) === 'string') {
+        // Update a single property of a multi-property component
+        newAttrValue = {};
+        newAttrValue[arg1] = arg2;
+        clobber = false;
+      } else {
+        // Update with a value, object, or CSS-style property string, with the possiblity
+        // of clobbering previous values.
+        newAttrValue = arg1;
+        clobber = (arg2 === true);
       }
 
-      /**
-       * Pass in complete data set for a multi-property component.
-       * >> setAttribute('foo', {bar: 'baz'}, true)
-       */
-      function multiPropertyClobber (el, componentName, propObject) {
-        el.updateComponent(componentName, propObject);
-      }
+      // Update component
+      this.updateComponent(attrName, newAttrValue, clobber);
+
+      // In debug mode, write component data up to the DOM.
+      isDebugMode = this.sceneEl && this.sceneEl.getAttribute('debug');
+      if (isDebugMode) { this.components[attrName].flushToDOM(); }
 
       /**
-       * Just update one of the component properties.
+       * Update a non-component attribute.
        * >> setAttribute('id', 'myEntity')
        */
       function normalSetAttribute (el, attrName, value) {
@@ -789,8 +776,8 @@ var proto = Object.create(ANode.prototype, {
     value: function (attr) {
       // If component, return component data.
       var component = this.components[attr];
-      if (component) { return component.getData(); }
-      return HTMLElement.prototype.getAttribute.call(this, attr);
+      if (component) { return component.data; }
+      return window.HTMLElement.prototype.getAttribute.call(this, attr);
     },
     writable: window.debug
   },
@@ -824,7 +811,7 @@ var proto = Object.create(ANode.prototype, {
       // If cached value exists, return partial component data.
       var component = this.components[attr];
       if (component) { return component.attrValue; }
-      return HTMLElement.prototype.getAttribute.call(this, attr);
+      return window.HTMLElement.prototype.getAttribute.call(this, attr);
     },
     writable: window.debug
   },

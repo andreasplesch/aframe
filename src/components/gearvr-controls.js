@@ -1,6 +1,7 @@
 var registerComponent = require('../core/component').registerComponent;
 var bind = require('../utils/bind');
-var isControllerPresent = require('../utils/tracked-controls').isControllerPresent;
+var checkControllerPresentAndSetup = require('../utils/tracked-controls').checkControllerPresentAndSetup;
+var emitIfAxesChanged = require('../utils/tracked-controls').emitIfAxesChanged;
 
 var GEARVR_CONTROLLER_MODEL_BASE_URL = 'https://cdn.aframe.io/controllers/samsung/';
 var GEARVR_CONTROLLER_MODEL_OBJ_URL = GEARVR_CONTROLLER_MODEL_BASE_URL + 'gear_vr_controller.obj';
@@ -21,31 +22,35 @@ module.exports.Component = registerComponent('gearvr-controls', {
     buttonTouchedColor: {type: 'color', default: '#777777'},
     buttonHighlightColor: {type: 'color', default: '#FFFFFF'},
     model: {default: true},
-    rotationOffset: {default: 0} // use -999 as sentinel value to auto-determine based on hand
+    rotationOffset: {default: 0}, // use -999 as sentinel value to auto-determine based on hand
+    armModel: {default: true}
   },
 
   // buttonId
   // 0 - trackpad
   // 1 - triggeri
   mapping: {
-    axis0: 'trackpad',
-    axis1: 'trackpad',
-    button0: 'trackpad',
-    button1: 'trigger'
+    axes: {'trackpad': [0, 1]},
+    buttons: ['trackpad', 'trigger']
   },
+
+  // Use these labels for detail on axis events such as thumbstickmoved.
+  // e.g. for thumbstickmoved detail, the first axis returned is labeled x, and the second is labeled y.
+  axisLabels: ['x', 'y', 'z', 'w'],
 
   bindMethods: function () {
     this.onModelLoaded = bind(this.onModelLoaded, this);
     this.onControllersUpdate = bind(this.onControllersUpdate, this);
     this.checkIfControllerPresent = bind(this.checkIfControllerPresent, this);
     this.removeControllersUpdateListener = bind(this.removeControllersUpdateListener, this);
-    this.onGamepadConnected = bind(this.onGamepadConnected, this);
-    this.onGamepadDisconnected = bind(this.onGamepadDisconnected, this);
+    this.onAxisMoved = bind(this.onAxisMoved, this);
+    this.onGamepadConnectionEvent = bind(this.onGamepadConnectionEvent, this);
   },
 
   init: function () {
     var self = this;
     this.animationActive = 'pointing';
+    this.onButtonChanged = bind(this.onButtonChanged, this);
     this.onButtonDown = function (evt) { self.onButtonEvent(evt.detail.id, 'down'); };
     this.onButtonUp = function (evt) { self.onButtonEvent(evt.detail.id, 'up'); };
     this.onButtonTouchStart = function (evt) { self.onButtonEvent(evt.detail.id, 'touchstart'); };
@@ -55,71 +60,62 @@ module.exports.Component = registerComponent('gearvr-controls', {
     this.everGotGamepadEvent = false;
     this.lastControllerCheck = 0;
     this.bindMethods();
-    this.isControllerPresent = isControllerPresent; // to allow mock
+    this.checkControllerPresentAndSetup = checkControllerPresentAndSetup; // to allow mock
+    this.emitIfAxesChanged = emitIfAxesChanged; // to allow mock
   },
 
   addEventListeners: function () {
     var el = this.el;
+    el.addEventListener('buttonchanged', this.onButtonChanged);
     el.addEventListener('buttondown', this.onButtonDown);
     el.addEventListener('buttonup', this.onButtonUp);
     el.addEventListener('touchstart', this.onButtonTouchStart);
     el.addEventListener('touchend', this.onButtonTouchEnd);
     el.addEventListener('model-loaded', this.onModelLoaded);
     el.addEventListener('axismove', this.onAxisMoved);
+
+    this.addControllersUpdateListener();
   },
 
   removeEventListeners: function () {
     var el = this.el;
+    el.removeEventListener('buttonchanged', this.onButtonChanged);
     el.removeEventListener('buttondown', this.onButtonDown);
     el.removeEventListener('buttonup', this.onButtonUp);
     el.removeEventListener('touchstart', this.onButtonTouchStart);
     el.removeEventListener('touchend', this.onButtonTouchEnd);
     el.removeEventListener('model-loaded', this.onModelLoaded);
     el.removeEventListener('axismove', this.onAxisMoved);
+
+    this.removeControllersUpdateListener();
   },
 
   checkIfControllerPresent: function () {
-    var isPresent = this.isControllerPresent(this.el.sceneEl, GAMEPAD_ID_PREFIX, this.data.hand ? {hand: this.data.hand} : {});
-    if (isPresent === this.controllerPresent) { return; }
-    this.controllerPresent = isPresent;
-    if (isPresent) { this.injectTrackedControls(); } // inject track-controls
+    this.checkControllerPresentAndSetup(this, GAMEPAD_ID_PREFIX, this.data.hand ? {hand: this.data.hand} : {});
   },
 
-  onGamepadConnected: function (evt) {
-    // for now, don't disable controller update listening, due to
-    // apparent issue with FF Nightly only sending one event and seeing one controller;
-    // this.everGotGamepadEvent = true;
-    // this.removeControllersUpdateListener();
-    this.checkIfControllerPresent();
-  },
-
-  onGamepadDisconnected: function (evt) {
-    // for now, don't disable controller update listening, due to
-    // apparent issue with FF Nightly only sending one event and seeing one controller;
-    // this.everGotGamepadEvent = true;
-    // this.removeControllersUpdateListener();
+  onGamepadConnectionEvent: function (evt) {
     this.checkIfControllerPresent();
   },
 
   play: function () {
     this.checkIfControllerPresent();
-    window.addEventListener('gamepadconnected', this.onGamepadConnected, false);
-    window.addEventListener('gamepaddisconnected', this.onGamepadDisconnected, false);
+    // Note that due to gamepadconnected event propagation issues, we don't rely on events.
+    window.addEventListener('gamepaddisconnected', this.checkIfControllerPresent, false);
     this.addControllersUpdateListener();
-    this.addEventListeners();
   },
 
   pause: function () {
-    window.removeEventListener('gamepadconnected', this.onGamepadConnected, false);
-    window.removeEventListener('gamepaddisconnected', this.onGamepadDisconnected, false);
-    this.removeControllersUpdateListener();
     this.removeEventListeners();
+    this.removeControllersUpdateListener();
+    // Note that due to gamepadconnected event propagation issues, we don't rely on events.
+    window.removeEventListener('gamepaddisconnected', this.checkIfControllerPresent, false);
   },
 
   injectTrackedControls: function () {
     var el = this.el;
     var data = this.data;
-    el.setAttribute('tracked-controls', {idPrefix: GAMEPAD_ID_PREFIX, rotationOffset: data.rotationOffset});
+    el.setAttribute('tracked-controls', {idPrefix: GAMEPAD_ID_PREFIX, rotationOffset: data.rotationOffset, armModel: data.armModel});
     if (!this.data.model) { return; }
     this.el.setAttribute('obj-model', {
       obj: GEARVR_CONTROLLER_MODEL_OBJ_URL,
@@ -136,10 +132,11 @@ module.exports.Component = registerComponent('gearvr-controls', {
   },
 
   onControllersUpdate: function () {
-    if (!this.everGotGamepadEvent) { this.checkIfControllerPresent(); }
+    // Note that due to gamepadconnected event propagation issues, we don't rely on events.
+    this.checkIfControllerPresent();
   },
 
-  // No need for onButtonChanged, since Daydream controller has no analog buttons.
+  // No need for onButtonChanged, since Gear VR controller has no analog buttons.
 
   onModelLoaded: function (evt) {
     var controllerObject3D = evt.detail.model;
@@ -150,13 +147,15 @@ module.exports.Component = registerComponent('gearvr-controls', {
     buttonMeshes.trackpad = controllerObject3D.getObjectByName('Touchpad');
   },
 
-  onAxisMoved: function (evt) {
-    if (evt.detail.axis[0] === 0 && evt.detail.axis[1] === 0) { return; }
-    this.el.emit('trackpadmoved', { x: evt.detail.axis[0], y: evt.detail.axis[1] });
+  onButtonChanged: function (evt) {
+    var button = this.mapping.buttons[evt.detail.id];
+    if (!button) return;
+    // Pass along changed event with button state, using button mapping for convenience.
+    this.el.emit(button + 'changed', evt.detail.state);
   },
 
   onButtonEvent: function (id, evtName) {
-    var buttonName = this.mapping['button' + id];
+    var buttonName = this.mapping.buttons[id];
     var i;
     if (Array.isArray(buttonName)) {
       for (i = 0; i < buttonName.length; i++) {
@@ -167,6 +166,8 @@ module.exports.Component = registerComponent('gearvr-controls', {
     }
     this.updateModel(buttonName, evtName);
   },
+
+  onAxisMoved: function (evt) { this.emitIfAxesChanged(this, this.mapping.axes, evt); },
 
   updateModel: function (buttonName, evtName) {
     var i;

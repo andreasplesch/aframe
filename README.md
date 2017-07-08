@@ -48,8 +48,8 @@
 <a href="https://ngokevin.github.io/kframe/scenes/aincraft/">
   <img alt="Aincraft" target="_blank" src="https://cloud.githubusercontent.com/assets/674727/24531777/25b8ff5e-1570-11e7-896c-3446d1419eb8.gif" height="190" width="32%">
 </a>
-<a href="https://aframe.io/examples/animation/">
-  <img alt="Animation by @processprocess" target="_blank" src="https://cloud.githubusercontent.com/assets/674727/24531805/6f44072c-1570-11e7-8956-8df2fb88523e.gif" height="190" width="32%">
+<a href="https://github.com/googlecreativelab/webvr-musicalforest">
+  <img alt="Musical Forest by @googlecreativelab" target="_blank" src="https://cloud.githubusercontent.com/assets/674727/25109861/b8e9ec48-2394-11e7-8f2d-ea1cd9df69c8.gif" height="190" width="32%">
 </a>
 <a href="https://aframe-gallery.glitch.me">
   <img alt="360 Image Gallery" target="_blank" src="https://cloud.githubusercontent.com/assets/674727/24572552/72f81bec-162e-11e7-9851-037d0280abdb.gif" height="190" width="32%">
@@ -100,7 +100,7 @@ components right from HTML.
 :runner: **Features**: Hit the ground running with A-Frame's built-in
 components such as geometries, materials, lights, animations, models,
 raycasters, shadows, positional audio, Vive / Touch / Cardboard controls. Get
-even father with community components such as particle systems, physics,
+even further with community components such as particle systems, physics,
 multiuser, oceans, mountains, speech recognition, or teleportation!
 
 ## Usage
@@ -115,7 +115,7 @@ and publishing now, remix the starter example on Glitch:
 ```html
 <html>
   <head>
-    <script src="https://aframe.io/releases/0.5.0/aframe.min.js"></script>
+    <script src="https://aframe.io/releases/0.6.0/aframe.min.js"></script>
   </head>
   <body>
     <a-scene>
@@ -130,7 +130,7 @@ and publishing now, remix the starter example on Glitch:
 ```
 
 With A-Frame's [entity-component
-architecture](https://aframe.io/docs/0.5.0/core/), we can drop in community
+architecture](https://aframe.io/docs/0.6.0/core/), we can drop in community
 components from the ecosystem (e.g., ocean, physics) and plug them into our
 objects straight from HTML:
 
@@ -139,7 +139,7 @@ objects straight from HTML:
 ```html
 <html>
   <head>
-    <script src="https://aframe.io/releases/0.5.0/aframe.min.js"></script>
+    <script src="https://aframe.io/releases/0.6.0/aframe.min.js"></script>
     <script src="https://unpkg.com/aframe-animation-component@3.2.1/dist/aframe-animation-component.min.js"></script>
     <script src="https://unpkg.com/aframe-particle-system-component@1.0.x/dist/aframe-particle-system-component.min.js"></script>
     <script src="https://unpkg.com/aframe-extras.ocean@%5E3.5.x/dist/aframe-extras.ocean.min.js"></script>
@@ -171,11 +171,11 @@ objects straight from HTML:
 
 ### Builds
 
-To use the latest stable build of A-Frame, include [`aframe.min.js`](https://aframe.io/releases/0.5.0/aframe.min.js):
+To use the latest stable build of A-Frame, include [`aframe.min.js`](https://aframe.io/releases/0.6.0/aframe.min.js):
 
 ```js
 <head>
-  <script src="https://aframe.io/releases/0.5.0/aframe.min.js"></script>
+  <script src="https://aframe.io/releases/0.6.0/aframe.min.js"></script>
 </head>
 ```
 

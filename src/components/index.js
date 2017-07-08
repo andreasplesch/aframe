@@ -7,7 +7,10 @@ require('./gearvr-controls');
 require('./geometry');
 require('./gltf-model');
 require('./hand-controls');
+require('./laser-controls');
 require('./light');
+require('./line');
+require('./link');
 require('./look-controls');
 require('./material');
 require('./obj-model');
@@ -24,7 +27,6 @@ require('./visible');
 require('./vive-controls');
 require('./wasd-controls');
 
-require('./scene/auto-enter-vr');
 require('./scene/canvas');
 require('./scene/debug');
 require('./scene/embedded');

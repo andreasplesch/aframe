@@ -9,23 +9,11 @@ suite('node acceptance tests', function () {
   setup(function () {
     let _window = global.window = jsdom.jsdom().defaultView;
     global.navigator = _window.navigator;
-    global.document = _window.document;
-    global.HTMLElement = _window.HTMLElement;
-    Object.defineProperty(_window, 'WebVRConfig', {
-      get () {
-        return global.WebVRConfig;
-      },
-      set (WebVRConfig) {
-        global.WebVRConfig = WebVRConfig;
-      }
-    });
   });
 
   teardown(function () {
     delete global.window;
-    delete global.document;
-    delete global.HTMLElement;
-    delete global.WebVRConfig;
+    delete global.navigator;
   });
 
   test('can run in node', function () {

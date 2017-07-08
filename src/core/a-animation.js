@@ -462,7 +462,11 @@ function getAnimationValues (el, attribute, dataFrom, dataTo, currentValue) {
    *   Then converts to hex for the setAttribute
    */
   function getForColorComponent () {
-    from = new THREE.Color(dataFrom);
+    if (dataFrom === undefined) {
+      from = new THREE.Color(el.getAttribute(attribute));
+    } else {
+      from = new THREE.Color(dataFrom);
+    }
     to = new THREE.Color(dataTo);
     partialSetAttribute = function (value) {
       if (attributeSplit.length > 1) {
